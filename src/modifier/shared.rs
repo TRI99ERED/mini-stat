@@ -5,6 +5,7 @@ use std::{
 
 use crate::{modifier::Modifier, stat::StatMarker};
 
+#[derive(Clone, Copy)]
 pub struct All<Raw>(PhantomData<Raw>)
 where
     Raw: Copy + PartialEq + Add<Output = Raw> + Mul<Output = Raw>;

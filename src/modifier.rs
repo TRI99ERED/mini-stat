@@ -3,10 +3,10 @@ use std::{
     ops::{Add, Mul},
 };
 
-use crate::{
-    stat::StatMarker,
-    shared::{All, Shared},
-};
+use crate::stat::StatMarker;
+
+pub mod shared;
+use shared::{All, Shared};
 
 pub trait Modifier: Copy {
     type Target: StatMarker;
@@ -46,7 +46,7 @@ where
     R: Copy + Add<Output = R> + Mul<Output = R> + PartialEq,
 {
     type TargetModifier = Flat<To, R>;
-    
+
     fn share(self) -> Self::TargetModifier {
         Flat::<To, R>(self.0, PhantomData)
     }
@@ -66,6 +66,16 @@ impl<S: StatMarker, R: Copy + Add<Output = R> + PartialEq> PartialEq for Flat<S,
     }
 }
 
+impl<S, R> From<R> for Flat<S, R>
+where
+    S: StatMarker,
+    R: Copy + Add<Output = R> + PartialEq,
+{
+    fn from(value: R) -> Self {
+        Self::from_raw(value)
+    }
+}
+
 impl<S: StatMarker> Default for Flat<S, f32> {
     fn default() -> Self {
         Self(0., PhantomData)
@@ -79,9 +89,14 @@ impl<S: StatMarker> Default for Flat<S, f64> {
 }
 
 #[derive(Debug)]
-pub struct Additive<S: StatMarker, R: Copy + Add<Output = R> + PartialEq>(R, PhantomData<S>);
+pub struct Additive<S: StatMarker, R: Copy + Add<Output = R> + Mul<Output = R> + PartialEq>(
+    R,
+    PhantomData<S>,
+);
 
-impl<S: StatMarker, R: Copy + Add<Output = R> + PartialEq> Modifier for Additive<S, R> {
+impl<S: StatMarker, R: Copy + Add<Output = R> + Mul<Output = R> + PartialEq> Modifier
+    for Additive<S, R>
+{
     type Target = S;
 
     type Raw = R;
@@ -105,23 +120,40 @@ where
     R: Copy + Add<Output = R> + Mul<Output = R> + PartialEq,
 {
     type TargetModifier = Additive<To, R>;
-    
+
     fn share(self) -> Self::TargetModifier {
         Additive::<To, R>(self.0, PhantomData)
     }
 }
 
-impl<S: StatMarker, R: Copy + Add<Output = R> + PartialEq> Clone for Additive<S, R> {
+impl<S: StatMarker, R: Copy + Add<Output = R> + Mul<Output = R> + PartialEq> Clone
+    for Additive<S, R>
+{
     fn clone(&self) -> Self {
         *self
     }
 }
 
-impl<S: StatMarker, R: Copy + Add<Output = R> + PartialEq> Copy for Additive<S, R> {}
+impl<S: StatMarker, R: Copy + Add<Output = R> + Mul<Output = R> + PartialEq> Copy
+    for Additive<S, R>
+{
+}
 
-impl<S: StatMarker, R: Copy + Add<Output = R> + PartialEq> PartialEq for Additive<S, R> {
+impl<S: StatMarker, R: Copy + Add<Output = R> + Mul<Output = R> + PartialEq> PartialEq
+    for Additive<S, R>
+{
     fn eq(&self, other: &Self) -> bool {
         self.0 == other.0
+    }
+}
+
+impl<S, R> From<R> for Additive<S, R>
+where
+    S: StatMarker,
+    R: Copy + Add<Output = R> + Mul<Output = R> + PartialEq,
+{
+    fn from(value: R) -> Self {
+        Self::from_raw(value)
     }
 }
 
@@ -164,7 +196,7 @@ where
     R: Copy + Add<Output = R> + Mul<Output = R> + PartialEq,
 {
     type TargetModifier = Multiplicative<To, R>;
-    
+
     fn share(self) -> Self::TargetModifier {
         Multiplicative::<To, R>(self.0, PhantomData)
     }
@@ -181,6 +213,16 @@ impl<S: StatMarker, R: Copy + Mul<Output = R> + PartialEq> Copy for Multiplicati
 impl<S: StatMarker, R: Copy + Mul<Output = R> + PartialEq> PartialEq for Multiplicative<S, R> {
     fn eq(&self, other: &Self) -> bool {
         self.0 == other.0
+    }
+}
+
+impl<S, R> From<R> for Multiplicative<S, R>
+where
+    S: StatMarker,
+    R: Copy + Mul<Output = R> + PartialEq,
+{
+    fn from(value: R) -> Self {
+        Self::from_raw(value)
     }
 }
 

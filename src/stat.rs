@@ -1,12 +1,12 @@
 use std::ops::{Add, Mul};
 
-use crate::{modifier::*, shared::Shared};
+use crate::modifier::{shared::Shared, *};
 
-pub trait StatMarker {
-    type Raw: Copy + PartialEq + Add<Output = Self::Raw> + Mul<Output = Self::Raw>;
+pub trait StatMarker: Clone {
+    type Raw: Clone + Copy + PartialEq + Add<Output = Self::Raw> + Mul<Output = Self::Raw>;
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Clone)]
 pub struct Stat<Marker>
 where
     Marker: StatMarker,
@@ -16,6 +16,22 @@ where
     flats: Vec<Flat<Marker, Marker::Raw>>,
     additives: Vec<Additive<Marker, Marker::Raw>>,
     multiplicatives: Vec<Multiplicative<Marker, Marker::Raw>>,
+}
+
+impl<Marker: Default> Default for Stat<Marker>
+where
+    Marker: StatMarker,
+    Marker::Raw: Default,
+{
+    fn default() -> Self {
+        Self {
+            base: Default::default(),
+            cached: Some(Marker::Raw::default()),
+            flats: Default::default(),
+            additives: Default::default(),
+            multiplicatives: Default::default(),
+        }
+    }
 }
 
 impl<Marker> Stat<Marker>
@@ -31,16 +47,21 @@ where
     {
         Stat {
             base,
+            cached: Some(base),
             ..Default::default()
         }
+    }
+
+    pub fn build(&mut self) -> Self {
+        self.clone()
     }
 
     pub fn base(&self) -> Marker::Raw {
         self.base
     }
 
-    pub fn cache_value(&mut self) {
-        if let None = self.cached {
+    pub fn cache_value(&mut self) -> &mut Self {
+        if self.cached.is_none() {
             let fadds = self
                 .flats
                 .iter()
@@ -57,63 +78,72 @@ where
             );
             self.cached = Some((self.base + fadds.value()) * madds.value() * mmuls.value());
         }
+        self
     }
 
     pub fn cached(&self) -> Option<Marker::Raw> {
         self.cached
     }
 
-    pub fn apply_flat(&mut self, flat: Flat<Marker, Marker::Raw>) {
+    pub fn apply_flat(&mut self, flat: Flat<Marker, Marker::Raw>) -> &mut Self {
         self.flats.push(flat);
         self.cached = None;
+        self
     }
 
-    pub fn apply_flat_shared<T>(&mut self, flat: T)
+    pub fn apply_flat_from_shared<T>(&mut self, flat: T) -> &mut Self
     where
         T: Shared<Marker, TargetModifier = Flat<Marker, Marker::Raw>>,
     {
         self.apply_flat(flat.share())
     }
 
-    pub fn apply_additive(&mut self, additive: Additive<Marker, Marker::Raw>) {
+    pub fn apply_add(&mut self, additive: Additive<Marker, Marker::Raw>) -> &mut Self {
         self.additives.push(additive);
         self.cached = None;
+        self
     }
 
-    pub fn apply_additive_shared<T>(&mut self, additive: T)
+    pub fn apply_add_from_shared<T>(&mut self, additive: T) -> &mut Self
     where
         T: Shared<Marker, TargetModifier = Additive<Marker, Marker::Raw>>,
     {
-        self.apply_additive(additive.share())
+        self.apply_add(additive.share())
     }
 
-    pub fn apply_multiplicative(&mut self, multiplicative: Multiplicative<Marker, Marker::Raw>) {
+    pub fn apply_mul(&mut self, multiplicative: Multiplicative<Marker, Marker::Raw>) -> &mut Self {
         self.multiplicatives.push(multiplicative);
         self.cached = None;
+        self
     }
 
-    pub fn apply_multiplicative_shared<T>(&mut self, multiplicative: T)
+    pub fn apply_mul_from_shared<T>(&mut self, multiplicative: T) -> &mut Self
     where
         T: Shared<Marker, TargetModifier = Multiplicative<Marker, Marker::Raw>>,
     {
-        self.apply_multiplicative(multiplicative.share())
+        self.apply_mul(multiplicative.share())
     }
 
-    pub fn remove_flat(&mut self, flat: Flat<Marker, Marker::Raw>) {
+    pub fn remove_flat(&mut self, flat: Flat<Marker, Marker::Raw>) -> &mut Self {
         if let Some(i) = self.flats.iter().position(|&v| v == flat) {
             self.flats.swap_remove(i);
             self.cached = None;
         }
+        self
     }
 
-    pub fn remove_additive(&mut self, additive: Additive<Marker, Marker::Raw>) {
+    pub fn remove_additive(&mut self, additive: Additive<Marker, Marker::Raw>) -> &mut Self {
         if let Some(i) = self.additives.iter().position(|&v| v == additive) {
             self.additives.swap_remove(i);
             self.cached = None;
         }
+        self
     }
 
-    pub fn remove_multiplicative(&mut self, multiplicative: Multiplicative<Marker, Marker::Raw>) {
+    pub fn remove_multiplicative(
+        &mut self,
+        multiplicative: Multiplicative<Marker, Marker::Raw>,
+    ) -> &mut Self {
         if let Some(i) = self
             .multiplicatives
             .iter()
@@ -122,6 +152,7 @@ where
             self.multiplicatives.swap_remove(i);
             self.cached = None;
         }
+        self
     }
 
     pub fn flats(&self) -> &impl IntoIterator<Item = Flat<Marker, Marker::Raw>> {
