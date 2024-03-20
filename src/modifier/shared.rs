@@ -5,16 +5,20 @@ use std::{
 
 use crate::{modifier::Modifier, stat::StatMarker};
 
-#[derive(Clone, Copy)]
-pub struct All<Raw>(PhantomData<Raw>)
-where
-    Raw: Copy + PartialEq + Add<Output = Raw> + Mul<Output = Raw>;
-
-impl<Raw> StatMarker for All<Raw>
+#[derive(Clone, Copy, PartialEq)]
+pub struct All<Raw, M>(PhantomData<Raw>, M)
 where
     Raw: Copy + PartialEq + Add<Output = Raw> + Mul<Output = Raw>,
+    M: Copy + PartialEq;
+
+impl<Raw, M> StatMarker for All<Raw, M>
+where
+    Raw: Copy + PartialEq + Add<Output = Raw> + Mul<Output = Raw>,
+    M: Copy + PartialEq,
 {
     type Raw = Raw;
+
+    type Metadata = M;
 }
 
 pub trait Shared<To: StatMarker>: Modifier {

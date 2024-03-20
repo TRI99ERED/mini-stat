@@ -2,8 +2,9 @@ use std::ops::{Add, Mul};
 
 use crate::modifier::{shared::Shared, *};
 
-pub trait StatMarker: Clone {
-    type Raw: Clone + Copy + PartialEq + Add<Output = Self::Raw> + Mul<Output = Self::Raw>;
+pub trait StatMarker: Clone + PartialEq {
+    type Raw: Copy + PartialEq + Add<Output = Self::Raw> + Mul<Output = Self::Raw>;
+    type Metadata: Copy + PartialEq;
 }
 
 #[derive(Debug, Clone)]
@@ -13,9 +14,9 @@ where
 {
     base: Marker::Raw,
     cached: Option<Marker::Raw>,
-    flats: Vec<Flat<Marker, Marker::Raw>>,
-    additives: Vec<Additive<Marker, Marker::Raw>>,
-    multiplicatives: Vec<Multiplicative<Marker, Marker::Raw>>,
+    flats: Vec<Flat<Marker, Marker::Raw, Marker::Metadata>>,
+    adds: Vec<Additive<Marker, Marker::Raw, Marker::Metadata>>,
+    muls: Vec<Multiplicative<Marker, Marker::Raw, Marker::Metadata>>,
 }
 
 impl<Marker: Default> Default for Stat<Marker>
@@ -28,8 +29,8 @@ where
             base: Default::default(),
             cached: Some(Marker::Raw::default()),
             flats: Default::default(),
-            additives: Default::default(),
-            multiplicatives: Default::default(),
+            adds: Default::default(),
+            muls: Default::default(),
         }
     }
 }
@@ -37,9 +38,9 @@ where
 impl<Marker> Stat<Marker>
 where
     Marker: StatMarker,
-    Flat<Marker, Marker::Raw>: Default,
-    Additive<Marker, Marker::Raw>: Default,
-    Multiplicative<Marker, Marker::Raw>: Default,
+    Flat<Marker, Marker::Raw, Marker::Metadata>: Default,
+    Additive<Marker, Marker::Raw, Marker::Metadata>: Default,
+    Multiplicative<Marker, Marker::Raw, Marker::Metadata>: Default,
 {
     pub fn with_base(base: Marker::Raw) -> Self
     where
@@ -62,21 +63,23 @@ where
 
     pub fn cache_value(&mut self) -> &mut Self {
         if self.cached.is_none() {
-            let fadds = self
+            let flats = self
                 .flats
                 .iter()
-                .fold(Flat::default(), |acc: Flat<Marker, Marker::Raw>, m| {
-                    acc.combine(m)
+                .fold(Flat::default().raw(), |acc: Marker::Raw, m| acc + m.raw());
+            let adds = self
+                .adds
+                .iter()
+                .fold(Additive::default().raw(), |acc: Marker::Raw, m| {
+                    acc + m.raw()
                 });
-            let madds = self.additives.iter().fold(
-                Additive::default(),
-                |acc: Additive<Marker, Marker::Raw>, m| acc.combine(m),
-            );
-            let mmuls = self.multiplicatives.iter().fold(
-                Multiplicative::default(),
-                |acc: Multiplicative<Marker, Marker::Raw>, m| acc.combine(m),
-            );
-            self.cached = Some((self.base + fadds.value()) * madds.value() * mmuls.value());
+            let muls = self
+                .muls
+                .iter()
+                .fold(Multiplicative::default().raw(), |acc: Marker::Raw, m| {
+                    acc * m.raw()
+                });
+            self.cached = Some((self.base + flats) * adds * muls);
         }
         self
     }
@@ -85,7 +88,7 @@ where
         self.cached
     }
 
-    pub fn apply_flat(&mut self, flat: Flat<Marker, Marker::Raw>) -> &mut Self {
+    pub fn apply_flat(&mut self, flat: Flat<Marker, Marker::Raw, Marker::Metadata>) -> &mut Self {
         self.flats.push(flat);
         self.cached = None;
         self
@@ -93,38 +96,44 @@ where
 
     pub fn apply_flat_from_shared<T>(&mut self, flat: T) -> &mut Self
     where
-        T: Shared<Marker, TargetModifier = Flat<Marker, Marker::Raw>>,
+        T: Shared<Marker, TargetModifier = Flat<Marker, Marker::Raw, Marker::Metadata>>,
     {
         self.apply_flat(flat.share())
     }
 
-    pub fn apply_add(&mut self, additive: Additive<Marker, Marker::Raw>) -> &mut Self {
-        self.additives.push(additive);
+    pub fn apply_add(
+        &mut self,
+        additive: Additive<Marker, Marker::Raw, Marker::Metadata>,
+    ) -> &mut Self {
+        self.adds.push(additive);
         self.cached = None;
         self
     }
 
     pub fn apply_add_from_shared<T>(&mut self, additive: T) -> &mut Self
     where
-        T: Shared<Marker, TargetModifier = Additive<Marker, Marker::Raw>>,
+        T: Shared<Marker, TargetModifier = Additive<Marker, Marker::Raw, Marker::Metadata>>,
     {
         self.apply_add(additive.share())
     }
 
-    pub fn apply_mul(&mut self, multiplicative: Multiplicative<Marker, Marker::Raw>) -> &mut Self {
-        self.multiplicatives.push(multiplicative);
+    pub fn apply_mul(
+        &mut self,
+        multiplicative: Multiplicative<Marker, Marker::Raw, Marker::Metadata>,
+    ) -> &mut Self {
+        self.muls.push(multiplicative);
         self.cached = None;
         self
     }
 
     pub fn apply_mul_from_shared<T>(&mut self, multiplicative: T) -> &mut Self
     where
-        T: Shared<Marker, TargetModifier = Multiplicative<Marker, Marker::Raw>>,
+        T: Shared<Marker, TargetModifier = Multiplicative<Marker, Marker::Raw, Marker::Metadata>>,
     {
         self.apply_mul(multiplicative.share())
     }
 
-    pub fn remove_flat(&mut self, flat: Flat<Marker, Marker::Raw>) -> &mut Self {
+    pub fn remove_flat(&mut self, flat: Flat<Marker, Marker::Raw, Marker::Metadata>) -> &mut Self {
         if let Some(i) = self.flats.iter().position(|&v| v == flat) {
             self.flats.swap_remove(i);
             self.cached = None;
@@ -132,40 +141,41 @@ where
         self
     }
 
-    pub fn remove_additive(&mut self, additive: Additive<Marker, Marker::Raw>) -> &mut Self {
-        if let Some(i) = self.additives.iter().position(|&v| v == additive) {
-            self.additives.swap_remove(i);
-            self.cached = None;
-        }
-        self
-    }
-
-    pub fn remove_multiplicative(
+    pub fn remove_add(
         &mut self,
-        multiplicative: Multiplicative<Marker, Marker::Raw>,
+        additive: Additive<Marker, Marker::Raw, Marker::Metadata>,
     ) -> &mut Self {
-        if let Some(i) = self
-            .multiplicatives
-            .iter()
-            .position(|&v| v == multiplicative)
-        {
-            self.multiplicatives.swap_remove(i);
+        if let Some(i) = self.adds.iter().position(|&v| v == additive) {
+            self.adds.swap_remove(i);
             self.cached = None;
         }
         self
     }
 
-    pub fn flats(&self) -> &impl IntoIterator<Item = Flat<Marker, Marker::Raw>> {
+    pub fn remove_mul(
+        &mut self,
+        multiplicative: Multiplicative<Marker, Marker::Raw, Marker::Metadata>,
+    ) -> &mut Self {
+        if let Some(i) = self.muls.iter().position(|&v| v == multiplicative) {
+            self.muls.swap_remove(i);
+            self.cached = None;
+        }
+        self
+    }
+
+    pub fn flats(&self) -> &impl IntoIterator<Item = Flat<Marker, Marker::Raw, Marker::Metadata>> {
         &self.flats
     }
 
-    pub fn additives(&self) -> &impl IntoIterator<Item = Additive<Marker, Marker::Raw>> {
-        &self.additives
+    pub fn additives(
+        &self,
+    ) -> &impl IntoIterator<Item = Additive<Marker, Marker::Raw, Marker::Metadata>> {
+        &self.adds
     }
 
     pub fn multiplicatives(
         &self,
-    ) -> &impl IntoIterator<Item = Multiplicative<Marker, Marker::Raw>> {
-        &self.multiplicatives
+    ) -> &impl IntoIterator<Item = Multiplicative<Marker, Marker::Raw, Marker::Metadata>> {
+        &self.muls
     }
 }
