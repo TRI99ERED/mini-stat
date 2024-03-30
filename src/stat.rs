@@ -19,7 +19,7 @@ where
     muls: Vec<Multiplicative<Marker, Marker::Raw, Marker::Metadata>>,
 }
 
-impl<Marker: Default> Default for Stat<Marker>
+impl<Marker> Default for Stat<Marker>
 where
     Marker: StatMarker,
     Marker::Raw: Default,
