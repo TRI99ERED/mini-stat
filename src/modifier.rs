@@ -18,7 +18,7 @@ pub trait Modifier: Sealed {
     fn raw(&self) -> Self::Raw;
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug)]
 pub struct Flat<S, R, M>
 where
     S: StatMarker,
@@ -28,6 +28,17 @@ where
     raw: R,
     metadata: Option<M>,
     _target: PhantomData<S>,
+}
+
+impl<S, R, M> PartialEq for Flat<S, R, M>
+where
+    S: StatMarker,
+    R: Copy + Add<Output = R> + PartialEq,
+    M: Copy + PartialEq,
+{
+    fn eq(&self, other: &Self) -> bool {
+        self.raw == other.raw && self.metadata == other.metadata
+    }
 }
 
 impl<S, R, M> Sealed for Flat<S, R, M>
@@ -130,7 +141,7 @@ where
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug)]
 pub struct Additive<S, R, M>
 where
     S: StatMarker,
@@ -140,6 +151,17 @@ where
     raw: R,
     metadata: Option<M>,
     _target: PhantomData<S>,
+}
+
+impl<S, R, M> PartialEq for Additive<S, R, M>
+where
+    S: StatMarker,
+    R: Copy + Add<Output = R> + Mul<Output = R> + PartialEq,
+    M: Copy + PartialEq,
+{
+    fn eq(&self, other: &Self) -> bool {
+        self.raw == other.raw && self.metadata == other.metadata
+    }
 }
 
 impl<S, R, M> Sealed for Additive<S, R, M>
@@ -242,7 +264,7 @@ where
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug)]
 pub struct Multiplicative<S, R, M>
 where
     S: StatMarker,
@@ -252,6 +274,17 @@ where
     raw: R,
     metadata: Option<M>,
     _target: PhantomData<S>,
+}
+
+impl<S, R, M> PartialEq for Multiplicative<S, R, M>
+where
+    S: StatMarker,
+    R: Copy + Mul<Output = R> + PartialEq,
+    M: Copy + PartialEq,
+{
+    fn eq(&self, other: &Self) -> bool {
+        self.raw == other.raw && self.metadata == other.metadata
+    }
 }
 
 impl<S, R, M> Sealed for Multiplicative<S, R, M>

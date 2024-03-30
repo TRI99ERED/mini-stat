@@ -1,6 +1,6 @@
 use mini_stat::{modifier::shared::Shared, prelude::*};
 
-#[derive(Debug, Default, Clone, PartialEq)]
+#[derive(Debug, Default)]
 struct Dummy;
 
 impl StatMarker for Dummy {

@@ -2,12 +2,12 @@ use std::ops::{Add, Mul};
 
 use crate::modifier::{shared::Shared, *};
 
-pub trait StatMarker: Clone + PartialEq {
+pub trait StatMarker {
     type Raw: Copy + PartialEq + Add<Output = Self::Raw> + Mul<Output = Self::Raw>;
     type Metadata: Copy + PartialEq;
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Stat<Marker>
 where
     Marker: StatMarker,
@@ -177,5 +177,17 @@ where
         &self,
     ) -> &impl IntoIterator<Item = Multiplicative<Marker, Marker::Raw, Marker::Metadata>> {
         &self.muls
+    }
+}
+
+impl<Marker: StatMarker> Clone for Stat<Marker> {
+    fn clone(&self) -> Self {
+        Self {
+            base: self.base,
+            cached: self.cached,
+            flats: self.flats.clone(),
+            adds: self.adds.clone(),
+            muls: self.muls.clone(),
+        }
     }
 }
