@@ -1,7 +1,10 @@
 pub mod modifier;
 pub mod stat;
 
+#[cfg(feature = "refcell")]
 pub mod mini_stat_single;
+
+#[cfg(feature = "mutex")]
 pub mod mini_stat_multi;
 
 pub mod prelude {
@@ -12,7 +15,10 @@ pub mod prelude {
     pub use crate::stat::Stat;
     pub use crate::stat::StatMarker;
 
+    #[cfg(feature = "refcell")]
     pub use crate::mini_stat_single::MiniStat as MiniStatRefcell;
+
+    #[cfg(feature = "mutex")]
     pub use crate::mini_stat_multi::MiniStat as MiniStatMutex;
 
     use crate::modifier::shared::All;
