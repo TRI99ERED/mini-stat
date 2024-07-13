@@ -1,5 +1,7 @@
 use std::ops::{Add, Mul};
 
+use smallvec::SmallVec;
+
 use crate::modifier::{shared::Shared, *};
 
 pub trait StatMarker {
@@ -8,15 +10,15 @@ pub trait StatMarker {
 }
 
 #[derive(Debug)]
-pub struct Stat<Marker>
+pub struct Stat<Marker, const N: usize = 2>
 where
     Marker: StatMarker,
 {
     base: Marker::Raw,
     cached: Option<Marker::Raw>,
-    flats: Vec<Flat<Marker, Marker::Raw, Marker::Metadata>>,
-    adds: Vec<Additive<Marker, Marker::Raw, Marker::Metadata>>,
-    muls: Vec<Multiplicative<Marker, Marker::Raw, Marker::Metadata>>,
+    flats: SmallVec<[Flat<Marker, Marker::Raw, Marker::Metadata>; N]>,
+    adds: SmallVec<[Additive<Marker, Marker::Raw, Marker::Metadata>; N]>,
+    muls: SmallVec<[Multiplicative<Marker, Marker::Raw, Marker::Metadata>; N]>,
 }
 
 impl<Marker> Default for Stat<Marker>
