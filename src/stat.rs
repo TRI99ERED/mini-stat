@@ -14,14 +14,14 @@ pub struct Stat<Marker, const N: usize = 2>
 where
     Marker: StatMarker,
 {
-    base: Marker::Raw,
-    cached: Option<Marker::Raw>,
-    flats: SmallVec<[Flat<Marker, Marker::Raw, Marker::Metadata>; N]>,
-    adds: SmallVec<[Additive<Marker, Marker::Raw, Marker::Metadata>; N]>,
-    muls: SmallVec<[Multiplicative<Marker, Marker::Raw, Marker::Metadata>; N]>,
+    pub(crate) base: Marker::Raw,
+    pub(crate) cached: Option<Marker::Raw>,
+    pub(crate) flats: SmallVec<[Flat<Marker, Marker::Raw, Marker::Metadata>; N]>,
+    pub(crate) adds: SmallVec<[Additive<Marker, Marker::Raw, Marker::Metadata>; N]>,
+    pub(crate) muls: SmallVec<[Multiplicative<Marker, Marker::Raw, Marker::Metadata>; N]>,
 }
 
-impl<Marker> Default for Stat<Marker>
+impl<Marker, const N: usize> Default for Stat<Marker, N>
 where
     Marker: StatMarker,
     Marker::Raw: Default,
@@ -37,7 +37,7 @@ where
     }
 }
 
-impl<Marker> Stat<Marker>
+impl<Marker, const N: usize> Stat<Marker, N>
 where
     Marker: StatMarker,
     Flat<Marker, Marker::Raw, Marker::Metadata>: Default,
@@ -48,7 +48,7 @@ where
     where
         Self: Default,
     {
-        Stat {
+        Self {
             base,
             cached: Some(base),
             ..Default::default()
@@ -165,24 +165,31 @@ where
         self
     }
 
-    pub fn flats(&self) -> &impl IntoIterator<Item = Flat<Marker, Marker::Raw, Marker::Metadata>> {
+    pub fn flats(
+        &self,
+    ) -> &SmallVec<[Flat<Marker, <Marker as StatMarker>::Raw, <Marker as StatMarker>::Metadata>; N]>
+    {
         &self.flats
     }
 
     pub fn additives(
         &self,
-    ) -> &impl IntoIterator<Item = Additive<Marker, Marker::Raw, Marker::Metadata>> {
+    ) -> &SmallVec<
+        [Additive<Marker, <Marker as StatMarker>::Raw, <Marker as StatMarker>::Metadata>; N],
+    > {
         &self.adds
     }
 
     pub fn multiplicatives(
         &self,
-    ) -> &impl IntoIterator<Item = Multiplicative<Marker, Marker::Raw, Marker::Metadata>> {
+    ) -> &SmallVec<
+        [Multiplicative<Marker, <Marker as StatMarker>::Raw, <Marker as StatMarker>::Metadata>; N],
+    > {
         &self.muls
     }
 }
 
-impl<Marker: StatMarker> Clone for Stat<Marker> {
+impl<Marker: StatMarker, const N: usize> Clone for Stat<Marker, N> {
     fn clone(&self) -> Self {
         Self {
             base: self.base,
