@@ -1,8 +1,10 @@
 pub mod modifier;
 pub mod stat;
 
-pub mod mini_stat_single;
-pub mod mini_stat_multi;
+#[cfg(feature = "refcell")]
+pub mod refcell;
+#[cfg(feature = "sync")]
+pub mod sync;
 
 pub mod prelude {
     pub use crate::modifier::Additive;
@@ -11,14 +13,19 @@ pub mod prelude {
     pub use crate::modifier::Multiplicative;
     pub use crate::stat::Stat;
     pub use crate::stat::StatMarker;
+    pub use crate::modifier::shared::All;
 
-    pub use crate::mini_stat_single::MiniStat as MiniStatRefcell;
-    pub use crate::mini_stat_multi::MiniStat as MiniStatMutex;
+    #[cfg(feature = "refcell")]
+    pub use crate::refcell::MiniStat;
+    #[cfg(feature = "sync")]
+    pub use crate::sync::MiniStat as MiniStatSync;
 
-    use crate::modifier::shared::All;
 
+    /// Flat modifier applicable to all stats.
     pub type FlatAll<R, M> = Flat<All<R, M>, R, M>;
+    /// Additive modifier applicable to all stats.
     pub type AdditiveAll<R, M> = Additive<All<R, M>, R, M>;
+    /// Multiplicative modifier applicable to all stats.
     pub type MultiplicativeAll<R, M> = Multiplicative<All<R, M>, R, M>;
 }
 

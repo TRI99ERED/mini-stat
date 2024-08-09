@@ -1,4 +1,7 @@
-use std::cell::RefCell;
+use std::{
+    cell::{RefCell, RefMut},
+    fmt::Debug,
+};
 
 use crate::{
     modifier::shared::Shared,
@@ -23,6 +26,10 @@ where
 
     pub fn with_base(base: Marker::Raw) -> Self {
         Self(RefCell::new(Stat::<Marker, N>::with_base(base)))
+    }
+
+    pub fn stat_mut(&self) -> RefMut<Stat<Marker, N>> {
+        self.0.borrow_mut()
     }
 
     pub fn base(&self) -> Marker::Raw {
@@ -80,5 +87,16 @@ where
         multiplicative: Multiplicative<Marker, Marker::Raw, Marker::Metadata>,
     ) {
         self.0.borrow_mut().remove_mul(multiplicative);
+    }
+}
+
+impl<Marker, const N: usize> Debug for MiniStat<Marker, N>
+where
+    Marker: StatMarker + Debug,
+    <Marker as StatMarker>::Raw: Debug,
+    <Marker as StatMarker>::Metadata: Debug,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.0.borrow().fmt(f)
     }
 }

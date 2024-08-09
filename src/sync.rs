@@ -1,4 +1,7 @@
-use std::sync::Mutex;
+use std::{
+    fmt::Debug,
+    sync::{Mutex, MutexGuard},
+};
 
 use crate::{
     modifier::shared::Shared,
@@ -23,6 +26,10 @@ where
 
     pub fn with_base(base: Marker::Raw) -> Self {
         Self(Mutex::new(Stat::<Marker, N>::with_base(base)))
+    }
+
+    pub fn stat_mut(&self) -> MutexGuard<Stat<Marker, N>> {
+        self.0.lock().unwrap()
     }
 
     pub fn base(&self) -> Marker::Raw {
@@ -80,5 +87,16 @@ where
         multiplicative: Multiplicative<Marker, Marker::Raw, Marker::Metadata>,
     ) {
         self.0.lock().unwrap().remove_mul(multiplicative);
+    }
+}
+
+impl<Marker, const N: usize> Debug for MiniStat<Marker, N>
+where
+    Marker: StatMarker + Debug,
+    <Marker as StatMarker>::Raw: Debug,
+    <Marker as StatMarker>::Metadata: Debug,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.0.lock().unwrap().fmt(f)
     }
 }

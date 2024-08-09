@@ -8,16 +8,69 @@ use crate::{sealed::Sealed, stat::StatMarker};
 pub mod shared;
 use shared::{All, Shared};
 
+/// Trait containing common modifier interface.
 pub trait Modifier: Sealed {
+    /// Target [stat marker][StatMarker] for which this modifier is applicable.
+    ///
+    /// See [shared] for ways to apply modifier to groups of stat markers.
     type Target: StatMarker;
+
+    /// Raw modifier type. Currently either `f32` or `f64` are allowed.
     type Raw: Copy + PartialEq;
+
+    /// Additional metadata, you may want to store with your modifiers (e.g. description).
+    ///
+    /// This is normally defined at [StatMarker] level and propagated to modifiers.
     type Metadata: Copy;
 
+    /// Create a modifier value from value of [Raw][Modifier::Raw] type.
+    ///
+    /// # Examples
+    /// ```rust
+    /// # use std::error::Error;
+    /// #
+    /// # fn main() -> Result<(), Box<dyn Error>> {
+    /// use mini_stat::prelude::{Modifier, FlatAll};
+    ///
+    /// let modifier = FlatAll::<f32, ()>::from_raw(1.);
+    /// #   Ok(())
+    /// # }
+    /// ```
     fn from_raw(raw: Self::Raw) -> Self;
 
+    /// Get value of underlying [Raw][Modifier::Raw] type.
+    ///
+    /// # Examples
+    /// ```rust
+    /// # use std::error::Error;
+    /// #
+    /// # fn main() -> Result<(), Box<dyn Error>> {
+    /// use mini_stat::prelude::{Modifier, FlatAll};
+    ///
+    /// let modifier = FlatAll::<f32, ()>::from_raw(1.);
+    ///
+    /// assert_eq!(modifier.raw(), 1.);
+    /// #   Ok(())
+    /// # }
+    /// ```
     fn raw(&self) -> Self::Raw;
 }
 
+/// Flat modifier (e.g. "+1", "-10"). Applied first to the base value.
+///
+/// # Examples
+/// ```rust
+/// # use std::error::Error;
+/// #
+/// # fn main() -> Result<(), Box<dyn Error>> {
+/// use mini_stat::prelude::{Modifier, Flat, All};
+///
+/// let modifier = Flat::<All<f32, ()>, f32, ()>::from_raw(1.);
+///
+/// assert_eq!(modifier.raw(), 1.);
+/// #   Ok(())
+/// # }
+/// ```
 #[derive(Debug)]
 pub struct Flat<S, R, M>
 where
@@ -141,6 +194,21 @@ where
     }
 }
 
+/// Additive multiplier modifier (e.g. "+1%", "-10%"). Applied second to the base value.
+///
+/// # Examples
+/// ```rust
+/// # use std::error::Error;
+/// #
+/// # fn main() -> Result<(), Box<dyn Error>> {
+/// use mini_stat::prelude::{Modifier, Additive, All};
+///
+/// let modifier = Additive::<All<f32, ()>, f32, ()>::from_raw(1.);
+///
+/// assert_eq!(modifier.raw(), 1.);
+/// #   Ok(())
+/// # }
+/// ```
 #[derive(Debug)]
 pub struct Additive<S, R, M>
 where
@@ -264,6 +332,21 @@ where
     }
 }
 
+/// Multiplicative multiplier modifier (e.g. "1%", "x10"). Applied third to the base value.
+///
+/// # Examples
+/// ```rust
+/// # use std::error::Error;
+/// #
+/// # fn main() -> Result<(), Box<dyn Error>> {
+/// use mini_stat::prelude::{Modifier, Multiplicative, All};
+///
+/// let modifier = Multiplicative::<All<f32, ()>, f32, ()>::from_raw(1.);
+///
+/// assert_eq!(modifier.raw(), 1.);
+/// #   Ok(())
+/// # }
+/// ```
 #[derive(Debug)]
 pub struct Multiplicative<S, R, M>
 where
